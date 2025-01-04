@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Car Racing Game</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+    canvas {
+      display: block;
+    }
+    #timer {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 24px;
+      color: white;
+      background-color: rgba(0, 0, 0, 0.7);
+      padding: 5px 10px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div id="timer">Time: 0s</div>
+  <canvas id="gameCanvas"></canvas>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const timerElement = document.getElementById('timer');
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Game settings
+    const roadWidth = canvas.width / 3;
+    const carWidth = roadWidth / 6;
+    const carHeight = carWidth * 2;
+    let gameSpeed = 5;
+    let timeElapsed = 0;
+
+    const roadColor = '#ffffff';
+    const grassColor = '#00aa00';
+
+    let playerCar = {
+      x: canvas.width / 2 - carWidth / 2,
+      y: canvas.height - carHeight - 20,
+      width: carWidth,
+      height: carHeight,
+      speed: 7,
+      image: new Image()
+    };
+    playerCar.image.src = 'https://i.ibb.co/KhZT2pN/ala.png'; // Replace with your car image URL
+
+    let obstacles = [];
+    let obstacleTimer = 0;
+
+    // Sounds
+    const crashSound = new Audio('https://example.com/crash.mp3');
+    const moveSound = new Audio('https://example.com/move.mp3');
+
+    function drawRoad() {
+      // Grass areas
+      ctx.fillStyle = grassColor;
+      ctx.fillRect(0, 0, canvas.width / 2 - roadWidth / 2, canvas.height);
+      ctx.fillRect(canvas.width / 2 + roadWidth / 2, 0, canvas.width / 2 - roadWidth / 2, canvas.height);
+
+      // Road
+      ctx.fillStyle = roadColor;
+      ctx.fillRect(canvas.width / 2 - roadWidth / 2, 0, roadWidth, canvas.height);
+
+      // Road edges
+      ctx.fillStyle = '#000';
+      ctx.fillRect(canvas.width / 2 - roadWidth / 2 - 5, 0, 5, canvas.height);
+      ctx.fillRect(canvas.width / 2 + roadWidth / 2, 0, 5, canvas.height);
+
+      // Lane markings
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 5;
+      for (let i = 0; i < canvas.height; i += 40) {
+        ctx.beginPath();
+        ctx.moveTo(canvas.width / 2, i);
+        ctx.lineTo(canvas.width / 2, i + 20);
+        ctx.stroke();
+      }
+    }
+
+    function drawCar(car) {
+      ctx.drawImage(car.image, car.x, car.y, car.width, car.height);
+    }
+
+    function drawObstacles() {
+      ctx.fillStyle = '#000';
+      obstacles.forEach(obstacle => {
+        ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+      });
+    }
+
+    function updateObstacles() {
+      if (obstacleTimer <= 0) {
+        const obstacleWidth = carWidth / 1.5;
+        const obstacleHeight = carHeight / 1.5;
+        const x = Math.random() * (roadWidth - obstacleWidth) + canvas.width / 2 - roadWidth / 2;
+
+        obstacles.push({
+          x,
+          y: -obstacleHeight,
+          width: obstacleWidth,
+          height: obstacleHeight
+        });
+
+        obstacleTimer = 100;
+      } else {
+        obstacleTimer--;
+      }
+
+      obstacles.forEach(obstacle => {
+        obstacle.y += gameSpeed;
+      });
+
+      obstacles = obstacles.filter(obstacle => obstacle.y < canvas.height);
+    }
+
+    function checkCollision() {
+      for (const obstacle of obstacles) {
+        if (
+          playerCar.x < obstacle.x + obstacle.width &&
+          playerCar.x + playerCar.width > obstacle.x &&
+          playerCar.y < obstacle.y + obstacle.height &&
+          playerCar.y + playerCar.height > obstacle.y
+        ) {
+          crashSound.play();
+          restartGame();
+        }
+      }
+    }
+
+    function movePlayer(e) {
+      if (e.key === 'ArrowLeft' && playerCar.x > canvas.width / 2 - roadWidth / 2) {
+        playerCar.x -= playerCar.speed;
+        moveSound.play();
+      } else if (e.key === 'ArrowRight' && playerCar.x < canvas.width / 2 + roadWidth / 2 - playerCar.width) {
+        playerCar.x += playerCar.speed;
+        moveSound.play();
+      }
+    }
+
+    function restartGame() {
+      playerCar.x = canvas.width / 2 - carWidth / 2;
+      playerCar.y = canvas.height - carHeight - 20;
+      obstacles = [];
+      gameSpeed = 5;
+      timeElapsed = 0;
+    }
+
+    function updateTimer() {
+      timeElapsed += 1;
+      timerElement.textContent = `Time: ${timeElapsed}s`;
+
+      if (timeElapsed % 20 === 0) {
+        gameSpeed += 1;
+      }
+    }
+
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      drawRoad();
+      drawCar(playerCar);
+      drawObstacles();
+      updateObstacles();
+      checkCollision();
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    setInterval(updateTimer, 1000);
+    window.addEventListener('keydown', movePlayer);
+    gameLoop();
+  </script>
+</body>
+</html>
